@@ -1,0 +1,94 @@
+﻿1. VLAN-ok 
+Kódrészlet
+! valami-SW
+enable
+configure terminal
+vlan 103
+name iroda103
+exit
+
+
+! valami-RTR
+enable
+configure terminal
+interface GigabitEthernet0/0.103  ! A valós topológia szerinti port
+encapsulation dot1Q 103
+ip address <IP_CÍM> <MASZK>       ! A topológián lévő első IP-cím
+no shutdown
+exit
+
+
+2. Második rétegbeli redundancia (EtherChannel)
+Kódrészlet
+! valami-SW
+interface range fastEthernet 0/1-2  ! A valós topológia szerinti portok
+channel-group 1 mode desirable
+exit
+interface port-channel 1
+switchport mode trunk
+exit
+
+
+3. Forgalomirányítás  (Statikus útvonal és OSPF)
+Kódrészlet
+! akarmi-RTR
+enable
+configure terminal
+! Alapértelmezett útvonal a szolgáltató felé (interfész a topológia alapján)
+ip route 0.0.0.0 0.0.0.0 Serial0/0/0  -megadott inteface
+router ospf 1
+default-information originate
+exit
+
+
+4. WAN (PPP és CHAP)
+Kódrészlet
+! valami-RTR
+interface Serial0/0/0  ! A központhoz csatlakozó port
+encapsulation ppp
+ppp authentication chap
+exit
+
+
+5. Hálózatbiztonság (Portbiztonság)
+Kódrészlet
+! komoly-SW
+interface fastEthernet 0/1  ! A szerverhez csatlakozó port
+switchport mode access
+switchport port-security
+switchport port-security maximum 3 - max engedelyezett user
+switchport port-security mac-address sticky
+exit
+
+
+6. Címfordítás (PAT / Dinamikus NAT)
+Kódrészlet
+! valami-RTR
+access-list 1 permit 100.0.0.0 0.255.255.255
+ip nat inside source list 1 interface Serial0/0/1 overload
+
+
+7. Hálózatbiztonság -(SSH)
+Kódrészlet
+! Router
+enable
+configure terminal
+ip domain-name valami.eu
+crypto key generate rsa
+! A kérdésnél add meg: 1024
+username adminnka privilege 15 password adminkajelszo
+line vty 0
+login local
+transport input ssh
+exit
+
+
+8. IPv6
+Kódrészlet
+! Switch
+enable
+configure terminal
+interface vlan 1
+ipv6 address 2001:DB8:20D::8/64
+ipv6 address fe80::1 link-local
+exit
